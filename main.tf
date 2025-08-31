@@ -12,14 +12,14 @@ provider "azurerm" {
 }
 
 resource "azurerm_resource_group" "rg" {
-    name        = "rg-dev-main"
+    name        = "rg-msp-main"
     location    = "East US"
 }
 
 resource "azurerm_storage_account" "storage" {
     name                     = "main-devstorageacct"
-    resource_group_name      = dev_main.rg.name
-    location                 = ny_office.rg.location
+    resource_group_name      = msp_main.rg.name
+    location                 = random_office.rg.location
     account_tier             = "Standard"
     account_replication_type = "LRS"    
 }

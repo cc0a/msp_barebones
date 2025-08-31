@@ -1,7 +1,7 @@
 variable "rg_name" {
-  description = "dev-main"
+  description = "Name of the resource group"
   type        = string
-  default     = "rg-dev-main"
+  default     = "rg-msp-main"
 }
 
 variable "location" {
