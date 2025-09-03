@@ -4,7 +4,7 @@ resource "azurerm_virtual_network" "hub" {
   name                = "hub-vnet"
   location            = var.location
   resource_group_name = var.resource_group
-  address_space       = ["10.0.0.0/16"]
+  address_space       = ["10.0.0.0/24"]
 }
 
 resource "azurerm_subnet" "hub_gateway" {
