@@ -114,4 +114,28 @@ resource "azurerm_linux_virtual_machine" "test_vm_nginx" {
     sku       = "22_04-lts"
     version   = "latest"
   }
+
+  resource "azurerm_windows_virtual_machine" "test_vm_win2022_file_server" {
+  name                = "test-vm"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.test_rg.name
+  size                = "Standard_B1s"
+  admin_username      = "azureuser"
+  admin_password      = "P@ssw0rd1234!"   # ⚠️ Replace with a secure secret
+
+  network_interface_ids = [
+    azurerm_network_interface.test_nic.id
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2022-Datacenter"
+    version   = "latest"
+  }
 }
