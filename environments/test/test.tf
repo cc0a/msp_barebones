@@ -138,4 +138,16 @@ resource "azurerm_linux_virtual_machine" "test_vm_nginx" {
     sku       = "2022-Datacenter"
     version   = "latest"
   }
+  resource "azurerm_virtual_desktop_host_pool" "avd_hostpool" {
+  name                = "avd-hostpool-01"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.test_rg.name
+
+  type                = "Pooled"         # or "Personal"
+  load_balancer_type  = "BreadthFirst"   # options: BreadthFirst, DepthFirst, Persistent
+  preferred_app_group_type = "Desktop"
+
+  maximum_sessions_allowed = 10
+  friendly_name            = "Test AVD Host Pool"
+  }
 }
