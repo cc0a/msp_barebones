@@ -1,5 +1,3 @@
-# environments/test.tf
-
 # ============================
 # Resource Group
 # ============================
@@ -26,20 +24,8 @@ resource "azurerm_subnet" "test_subnet" {
 }
 
 # ============================
-# NICs for VMs
+# NICs (no NIC for nginx anymore)
 # ============================
-resource "azurerm_network_interface" "nic_nginx" {
-  name                = "nic-nginx"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.test_rg.name
-
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.test_subnet.id
-    private_ip_address_allocation = "Dynamic"
-  }
-}
-
 resource "azurerm_network_interface" "nic_sql" {
   name                = "nic-sql"
   location            = var.location
@@ -77,159 +63,98 @@ resource "azurerm_network_interface" "nic_win2022" {
 }
 
 # ============================
-# Linux VMs
+# AKS Cluster (nginx lives here)
 # ============================
-resource "azurerm_linux_virtual_machine" "test_vm_nginx" {
-  name                = "test-vm-nginx"
+resource "azurerm_kubernetes_cluster" "aks_nginx" {
+  name                = "aks-nginx-cluster"
   location            = var.location
   resource_group_name = azurerm_resource_group.test_rg.name
-  size                = "Standard_B1s"
-  admin_username      = "azureuser"
+  dns_prefix          = "aksnginx"
 
-  network_interface_ids = [
-    azurerm_network_interface.nic_nginx.id
-  ]
-
-  admin_ssh_key {
-    username   = "azureuser"
-    public_key = file("~/.ssh/id_rsa.pub")
+  default_node_pool {
+    name            = "default"
+    node_count      = 2
+    vm_size         = "Standard_B2s"
+    vnet_subnet_id  = azurerm_subnet.test_subnet.id
   }
 
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
+  identity {
+    type = "SystemAssigned"
   }
 
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "22_04-lts"
-    version   = "latest"
-  }
-}
-
-resource "azurerm_linux_virtual_machine" "test_vm_sql" {
-  name                = "test-vm-sql"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.test_rg.name
-  size                = "Standard_B1s"
-  admin_username      = "azureuser"
-
-  network_interface_ids = [
-    azurerm_network_interface.nic_sql.id
-  ]
-
-  admin_ssh_key {
-    username   = "azureuser"
-    public_key = file("~/.ssh/id_rsa.pub")
-  }
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "22_04-lts"
-    version   = "latest"
-  }
-}
-
-resource "azurerm_linux_virtual_machine" "test_vm_memcache" {
-  name                = "test-vm-memcache"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.test_rg.name
-  size                = "Standard_B1s"
-  admin_username      = "azureuser"
-
-  network_interface_ids = [
-    azurerm_network_interface.nic_memcache.id
-  ]
-
-  admin_ssh_key {
-    username   = "azureuser"
-    public_key = file("~/.ssh/id_rsa.pub")
-  }
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "22_04-lts"
-    version   = "latest"
+  network_profile {
+    network_plugin    = "azure"
+    load_balancer_sku = "standard"
   }
 }
 
 # ============================
-# Windows VM
+# Kubernetes Provider (to deploy nginx)
 # ============================
-resource "azurerm_windows_virtual_machine" "test_vm_win2022_file_server" {
-  name                = "test-vm-win2022"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.test_rg.name
-  size                = "Standard_B1s"
-  admin_username      = "azureuser"
-  admin_password      = "P@ssw0rd1234!"   # ⚠️ Replace with a secure secret
-
-  network_interface_ids = [
-    azurerm_network_interface.nic_win2022.id
-  ]
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "MicrosoftWindowsServer"
-    offer     = "WindowsServer"
-    sku       = "2022-Datacenter"
-    version   = "latest"
-  }
+provider "kubernetes" {
+  host                   = azurerm_kubernetes_cluster.aks_nginx.kube_config[0].host
+  client_certificate     = base64decode(azurerm_kubernetes_cluster.aks_nginx.kube_config[0].client_certificate)
+  client_key             = base64decode(azurerm_kubernetes_cluster.aks_nginx.kube_config[0].client_key)
+  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.aks_nginx.kube_config[0].cluster_ca_certificate)
 }
 
 # ============================
-# Azure Virtual Desktop Host Pools
+# nginx Deployment + Service
 # ============================
-resource "azurerm_virtual_desktop_host_pool_01" "avd_hostpool" {
-  name                = "avd-hostpool-01"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.test_rg.name
+resource "kubernetes_deployment" "nginx" {
+  metadata {
+    name      = "nginx"
+    namespace = "default"
+    labels = {
+      app = "nginx"
+    }
+  }
 
-  type                      = "Pooled"
-  load_balancer_type        = "BreadthFirst"
-  preferred_app_group_type  = "Desktop"
+  spec {
+    replicas = 2
 
-  maximum_sessions_allowed = 10
-  friendly_name            = "Test AVD Host Pool"
+    selector {
+      match_labels = {
+        app = "nginx"
+      }
+    }
 
-  resource "azurerm_virtual_desktop_host_pool_02" "avd_hostpool" {
-  name                = "avd-hostpool-01"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.test_rg.name
+    template {
+      metadata {
+        labels = {
+          app = "nginx"
+        }
+      }
 
-  type                      = "Pooled"
-  load_balancer_type        = "BreadthFirst"
-  preferred_app_group_type  = "Desktop"
+      spec {
+        container {
+          name  = "nginx"
+          image = "nginx:latest"
 
-  maximum_sessions_allowed = 10
-  friendly_name            = "Test AVD Host Pool"
+          port {
+            container_port = 80
+          }
+        }
+      }
+    }
+  }
+}
 
-  resource "azurerm_virtual_desktop_host_pool_03" "avd_hostpool" {
-  name                = "avd-hostpool-01"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.test_rg.name
+resource "kubernetes_service" "nginx" {
+  metadata {
+    name = "nginx-service"
+  }
 
-  type                      = "Pooled"
-  load_balancer_type        = "BreadthFirst"
-  preferred_app_group_type  = "Desktop"
+  spec {
+    selector = {
+      app = "nginx"
+    }
 
-  maximum_sessions_allowed = 10
-  friendly_name            = "Test AVD Host Pool"
+    port {
+      port        = 80
+      target_port = 80
+    }
+
+    type = "LoadBalancer"
+  }
 }
