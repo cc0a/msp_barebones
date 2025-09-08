@@ -11,3 +11,4 @@ resource "azurerm_role_assignment" "platform_admin" {
   role_definition_name = "Owner"
   principal_id         = var.platform_admin_object_id
 }
+
