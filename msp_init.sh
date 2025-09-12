@@ -14,6 +14,6 @@ echo "Terraform apply complete!"
 
 # Run your Python script
 echo "Running Python script..."
-python3 /path/to/your_script.py
+python3 migrate.py
 
 echo "Python script finished!"
