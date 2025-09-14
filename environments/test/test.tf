@@ -1,9 +1,22 @@
 # ============================
+# User Interaction
+# ============================
+
+variable "inputname" {
+    type = string
+    description = "Set the name of the Resource Group"
+}
+
+# ============================
 # Resource Group
 # ============================
 resource "azurerm_resource_group" "test_rg" {
   name     = "test-rg"
   location = var.location
+
+  tags = {
+    Name = inputname
+  }
 }
 
 # ============================
