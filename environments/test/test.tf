@@ -184,3 +184,11 @@ resource "kubernetes_service" "nginx" {
     type = "LoadBalancer"
   }
 }
+
+# ============================
+# Outputs
+# ============================
+
+output "grep_vpc_id" {
+  value = aws_vpc.test_vpc.id
+}
