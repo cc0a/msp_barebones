@@ -10,6 +10,15 @@ variable "inputname" {
 # ============================
 # Resource Group
 # ============================
+
+resource "aws_vpc" "test_vpc" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = var.inputname
+  }  
+}
+
 resource "azurerm_resource_group" "test_rg" {
   name     = "test-rg"
   location = var.location
@@ -17,6 +26,10 @@ resource "azurerm_resource_group" "test_rg" {
   tags = {
     Name = inputname
   }
+}
+
+output "vpcid" {
+  value = aws_vpc.test_vpc.id
 }
 
 # ============================
