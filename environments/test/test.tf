@@ -112,7 +112,14 @@ resource "azurerm_kubernetes_cluster" "aks_nginx" {
     network_plugin    = "azure"
     load_balancer_sku = "standard"
   }
+  depends_on = [azurerm_role_assignment.aks_subnet]
 }
+
+# ============================
+# Dependencies
+# ============================
+
+
 
 # ============================
 # Kubernetes Provider (to deploy nginx)
