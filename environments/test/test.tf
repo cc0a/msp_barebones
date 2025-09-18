@@ -199,3 +199,10 @@ resource "kubernetes_service" "nginx" {
 output "grep_vpc_id" {
   value = aws_vpc.test_vpc.id
 }
+
+data "azure_instance" "nginx" {
+  filter {
+    name   = "tag:Name"
+    values = ["webserver"]
+  }
+}
