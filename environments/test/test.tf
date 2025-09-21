@@ -1,4 +1,21 @@
 # ============================
+# Provider
+# ============================
+
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.0"
+    }
+  }
+}
+
+# ============================
 # User Interaction
 # ============================
 
